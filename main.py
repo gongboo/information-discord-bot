@@ -39,7 +39,7 @@ async def generate_wordcloud(ctx, url):
     soup = BeautifulSoup(response.content, 'html.parser')
 
     text = soup.get_text()
-    print(text)
+    # print(text)
 
     # 한글 폰트 깨져서 경로 지정
     font_path = 'assets/NotoSansKR-VariableFont_wght.ttf'
@@ -130,7 +130,7 @@ async def add_contents(ctx):
             try:
                 # 헤더 429에러 때문에 변경
                 headers = {'User-Agent': 'Mozilla/5.0'}
-                response = requests.get(url, headers=headers)
+                response = requests.get(link, headers=headers)
 
                 if response.status_code == 200:
                     rss_content = response.text
