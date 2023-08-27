@@ -152,6 +152,7 @@ async def add_contents(ctx):
                         })
                         with open('found_data.json', 'w') as json_file:
                             json.dump(entry_data, json_file, indent=4)
+                    await ctx.send(link+" finished!")
 
             except Exception as e:
                 print(f"An error occurred: {e}")
