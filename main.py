@@ -156,7 +156,7 @@ async def add_contents(ctx):
 
             except Exception as e:
                 print(f"An error occurred: {e}")
-            time.sleep(10)
+            time.sleep(5)
         else:
             print("not made yet")
 
