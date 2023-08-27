@@ -209,7 +209,9 @@ pip-selfcheck.json
 .ionide
 
 
-.tests/
+tests/
+myenv/
+assets/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,venv
 assets/NotoSansKR-VariableFont_wght.ttf
