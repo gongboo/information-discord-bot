@@ -148,7 +148,7 @@ async def add_contents(ctx):
     existing_links = load_links_from_json("favorite_links.json")
     print(existing_links["favorite_links"])
     found_data = load_links_from_json("found_data.json")
-    for link in existing_links["favorite_links"]:
+    for fav_link in existing_links["favorite_links"]:
         print(link)
         if ("https://www.reddit.com/" in link):  # 링크가 레딧일 경우
             print("the link is reddit")
@@ -176,7 +176,7 @@ async def add_contents(ctx):
                         })
                         with open('found_data.json', 'w') as json_file:
                             json.dump(found_data, json_file, indent=4)
-                    await ctx.send(link+" finished!")
+                    await ctx.send("<"+fav_link+"> finished!")
 
             except Exception as e:
                 print(f"An error occurred: {e}")
