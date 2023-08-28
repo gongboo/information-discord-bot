@@ -39,12 +39,10 @@ async def possible_sites(ctx):
 
 
 @bot.command()
-async def generate_wordcloud(ctx, url):
+async def wordcloud(ctx, url):
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
-
     text = soup.get_text()
-    # print(text)
 
     # 한글 폰트 깨져서 경로 지정
     font_path = 'assets/NotoSansKR-VariableFont_wght.ttf'
@@ -93,7 +91,7 @@ async def show_links(ctx):
 
 
 @bot.command()
-async def show_saved_topic_links(ctx):
+async def show_contents(ctx):
     data = load_links_from_json("found_data.json")
 
     # for datum in data:
@@ -124,7 +122,7 @@ async def show_saved_topic_links(ctx):
             txt += next_link
 
 
-def getKeyword(text):
+def get_keyword(text):
     # 키워드 추출 : yake
     language = "en"
     max_ngram_size = 3
@@ -144,18 +142,20 @@ def getKeyword(text):
 
 
 @bot.command()
-async def add_contents(ctx):
+async def refresh_contents(ctx):
     existing_links = load_links_from_json("favorite_links.json")
-    print(existing_links["favorite_links"])
+    # print(existing_links["favorite_links"])
     found_data = load_links_from_json("found_data.json")
-    for fav_link in existing_links["favorite_links"]:
-        print(link)
-        if ("https://www.reddit.com/" in link):  # 링크가 레딧일 경우
+    with open('found_data.json', 'w') as json_file:
+        json.dump(found_data, json_file, indent=4)
+    for i, fav_link in enumerate(existing_links["favorite_links"]):
+        await ctx.send(str(i) + "번째 링크 작업을 시작했습니다")
+        if ("https://www.reddit.com/" in fav_link):  # 링크가 레딧일 경우
             print("the link is reddit")
             try:
                 # 헤더 429에러 때문에 변경
                 headers = {'User-Agent': 'Mozilla/5.0'}
-                response = requests.get(link, headers=headers)
+                response = requests.get(fav_link, headers=headers)
 
                 if response.status_code == 200:
                     rss_content = response.text
@@ -172,11 +172,11 @@ async def add_contents(ctx):
                             "title": title,
                             "content": content,
                             "link": link,
-                            "keywords": getKeyword(content)
+                            "keywords": get_keyword(content)
                         })
                         with open('found_data.json', 'w') as json_file:
                             json.dump(found_data, json_file, indent=4)
-                    await ctx.send("<"+fav_link+"> finished!")
+                    # await ctx.send("<"+fav_link+"> finished!")
 
             except Exception as e:
                 print(f"An error occurred: {e}")
