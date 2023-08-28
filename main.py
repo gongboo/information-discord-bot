@@ -94,29 +94,12 @@ async def show_links(ctx):
 async def show_contents(ctx):
     data = load_links_from_json("found_data.json")
 
-    # for datum in data:
-    #     txt = ""
-    #     txt += datum["title"]+"\n"
-    #     txt += datum["link"]+"\n"+"\n"
-    #     await ctx.send(f"Here are your titles links:\n{txt}")
-    #     time.sleep(1)
-
-    # with open("links_for_send.md", "w") as theFile:
-    #     theFile.write("")
-    # for datum in data:
-    #     txt = ""
-    #     txt += datum["title"]+" "
-    #     txt += "[link]("+datum["link"]+")\n"+"\n"
-    #     with open("links_for_send.md", "a") as theFile:
-    #         theFile.write(txt)
-    # await ctx.send(file=discord.File("links_for_send.md"))
-
     txt = ""
     for datum in data:
         next_link = datum["title"]+" [link](<"+datum["link"]+">)\n"+"\n"
         if (len(txt)+len(next_link) < 1000):
             txt += next_link
-        if (len(txt)+len(next_link) >= 1000):
+        elif (len(txt)+len(next_link) >= 1000):
             await ctx.send(txt, embed=None)
             txt = ""
             txt += next_link
@@ -143,11 +126,11 @@ def get_keyword(text):
 
 @bot.command()
 async def refresh_contents(ctx):
-    existing_links = load_links_from_json("favorite_links.json")
-    # print(existing_links["favorite_links"])
-    found_data = load_links_from_json("found_data.json")
     with open('found_data.json', 'w') as json_file:
-        json.dump(found_data, json_file, indent=4)
+        json.dump([], json_file, indent=4)
+
+    existing_links = load_links_from_json("favorite_links.json")
+    found_data = load_links_from_json("found_data.json")
     for i, fav_link in enumerate(existing_links["favorite_links"]):
         await ctx.send(str(i) + "번째 링크 작업을 시작했습니다")
         if ("https://www.reddit.com/" in fav_link):  # 링크가 레딧일 경우
@@ -176,7 +159,6 @@ async def refresh_contents(ctx):
                         })
                         with open('found_data.json', 'w') as json_file:
                             json.dump(found_data, json_file, indent=4)
-                    # await ctx.send("<"+fav_link+"> finished!")
 
             except Exception as e:
                 print(f"An error occurred: {e}")
