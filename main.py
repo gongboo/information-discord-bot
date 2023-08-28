@@ -34,6 +34,11 @@ async def echo(ctx, say):
 
 
 @bot.command()
+async def possible_sites(ctx):
+    await ctx.send("현재 가능한 사이트는 reddit 입니다")
+
+
+@bot.command()
 async def generate_wordcloud(ctx, url):
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -91,12 +96,32 @@ async def show_links(ctx):
 async def show_saved_topic_links(ctx):
     data = load_links_from_json("found_data.json")
 
+    # for datum in data:
+    #     txt = ""
+    #     txt += datum["title"]+"\n"
+    #     txt += datum["link"]+"\n"+"\n"
+    #     await ctx.send(f"Here are your titles links:\n{txt}")
+    #     time.sleep(1)
+
+    # with open("links_for_send.md", "w") as theFile:
+    #     theFile.write("")
+    # for datum in data:
+    #     txt = ""
+    #     txt += datum["title"]+" "
+    #     txt += "[link]("+datum["link"]+")\n"+"\n"
+    #     with open("links_for_send.md", "a") as theFile:
+    #         theFile.write(txt)
+    # await ctx.send(file=discord.File("links_for_send.md"))
+
+    txt = ""
     for datum in data:
-        txt = ""
-        txt += datum["title"]+"\n"
-        txt += datum["link"]+"\n"+"\n"
-        await ctx.send(f"Here are your titles links:\n{txt}")
-        time.sleep(1)
+        next_link = datum["title"]+" [link](<"+datum["link"]+">)\n"+"\n"
+        if (len(txt)+len(next_link) < 1000):
+            txt += next_link
+        if (len(txt)+len(next_link) >= 1000):
+            await ctx.send(txt, embed=None)
+            txt = ""
+            txt += next_link
 
 
 def getKeyword(text):
@@ -122,7 +147,7 @@ def getKeyword(text):
 async def add_contents(ctx):
     existing_links = load_links_from_json("favorite_links.json")
     print(existing_links["favorite_links"])
-
+    found_data = load_links_from_json("found_data.json")
     for link in existing_links["favorite_links"]:
         print(link)
         if ("https://www.reddit.com/" in link):  # 링크가 레딧일 경우
@@ -139,19 +164,18 @@ async def add_contents(ctx):
                     root = ET.fromstring(rss_content)
                     namespace = {'ns': 'http://www.w3.org/2005/Atom'}
 
-                    entry_data = []
                     for entry in root.findall('ns:entry', namespace):
                         title = entry.find('ns:title', namespace).text
                         content = entry.find('ns:content', namespace).text
                         link = entry.find('ns:link', namespace).attrib['href']
-                        entry_data.append({
+                        found_data.append({
                             "title": title,
                             "content": content,
                             "link": link,
                             "keywords": getKeyword(content)
                         })
                         with open('found_data.json', 'w') as json_file:
-                            json.dump(entry_data, json_file, indent=4)
+                            json.dump(found_data, json_file, indent=4)
                     await ctx.send(link+" finished!")
 
             except Exception as e:
