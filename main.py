@@ -15,6 +15,7 @@ import yake
 load_dotenv()
 
 TOKEN = os.getenv('BOT_TOKEN')
+openai.api_key = os.getenv("GPT_KEY")
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 intents = discord.Intents.default()
@@ -95,14 +96,60 @@ async def show_contents(ctx):
     data = load_links_from_json("found_data.json")
 
     txt = ""
-    for datum in data:
-        next_link = datum["title"]+" [link](<"+datum["link"]+">)\n"+"\n"
+    for i, datum in enumerate(data):
+        next_link = datum["title"]+" [link](<"+datum["link"]+">)\n"
         if (len(txt)+len(next_link) < 1000):
             txt += next_link
         elif (len(txt)+len(next_link) >= 1000):
             await ctx.send(txt, embed=None)
             txt = ""
             txt += next_link
+
+
+def get_text_for_gpt():
+    data = load_links_from_json("found_data.json")
+    total_txt = ""
+    for i, datum in enumerate(data):
+        next_link = str(i+1)+":"+datum["title"]+"\n"
+        total_txt += next_link
+
+
+def callGPT(text):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+              "role": "system",
+              "content": "Please categorize the post titles based on their general themes or subjects, and also provide a title for each category. Additionally, indicate the number of titles included in each category. Also please exclude categories and titles which are not related to computer science or technology.\n\nFor example like this:\npython basics: 1,4,8,12\nflutter news: 3,5"
+            },
+            {
+                "role": "user",
+                "content": "1:Hello! Does anyone here actively play the game Flutter: Starlight or would be willing to play it with me?\n2:Random heart flutter freaked me out And now I’m having frequent heart palpitations.\n3:Flutter Mane and Misdreavus upside down are another thing link\nPlaying Heavensward and Aymeric & Estinien make my heart flutter… I’m a straight guy!\n4:🔥 Butterflies Fluttering Around A Turtle\n5:TIL In 1994, in an attempt to ban raves, the UK passed a law banning public performance of music “wholly or predominantly characterized by the emission of a succession of repetitive beats.” In response, the electronic band Autechre issued a track, Flutter, in which no two bars have the same beat.\n6:Flutter by\n7:🔥 Butterflies fluttering around a turtle\nCan anyone identify this flag? And also tell me why it makes my heart flutter?\n8:Aeroelastic flutter\n9:[Ducker] Whatever your opinions on Pogba/his situation with United, I’d argue that no matter who the player the nerve to start fluttering eyelashes at another club days after your team have been stuffed 6-1 at home really isn’t a good look\n10:I’m an RN. My wife is an RN. I was just hospitalized for 2 days due to new onset atrial flutter and a sustained heart rate of 140 bpm for over an hour. My wife decided to update the whiteboard as a test. No one used my “preferred name” or mentioned it. Surprise.\n11:Theorymon: Upside-Down Flutter Mane\n12:“Atomic Habits” and Learning to Code: Identity and Beliefs. link\n13:I need to automate CRM tasks with Javascript. Unsure where to begin. Please help!\n14:Javascript Prototype Expalined\n15:Print HTM With Their Styles\n16:Pass by Value in JavaScript | Pass by Reference - Scientech Easy\n17:i use chatgpt to learn python\n18:STOP USING PYTHON 😡😡😡\n19:My college roommate wrote a Python script to let RNG give him rewards when he finishes an assignment or gets up early (I told him he's crazy for this).\n20:Python programmers be like: \"Yeah that makes sense\" 🤔\n21:#2020 - Python Cowboy"
+            },
+            {
+                "role": "assistant",
+                "content": "Category 1: Flutter Game 🎮 - 1\nCategory 2: Music and Flutter Beat 🎵- 5 \nCategory 3: Javascript Learning and Tasks 💻 - 13, 14, 15, 16 \nCategory 4: Python Learning and Application 🐍 - 17, 18, 19\nCategory 5: Humor in Programming (Specifically Python) 😄 - 20, 21"
+            },
+            {
+                "role": "user",
+                "content": "1:Flutter app looks weird suddenly?\n2:What are these strange spacings beneath my TextFields?\n3:Servicenow/Salesforce or Flutter, which is good from a career perspective\n4:What do you think about Flutter Flow ?\n5:I want to learn Python but have no idea where to start.\n6Announcing Python in Excel: Combining the power of Python and the flexibility of Excel.\n7:Python coming to excel\n8:Microsoft is bringing Python to Excel\n9:‘Monty Python’ Star John Cleese Says ‘Life Of Brian’ Scene Won’t Be Cut Despite Modern Sensitivites\n10:Capturing a python\n11:🔥 Cane toads riding a giant python to escape rising flood waters in Australia\n12:Monty Python’s Eric Idle says he hates conservatives: ‘they’re horrible people’\n13:Contagious giggles at the mere mention of the name Biggus Dickus (from Monty Python's Life of Brian, 1979)\n14:I mad a python script the lets you scribble with SD in realtime\nSteve Irwin casually reacts on being bitten by a python on Live TV\nMonty Python and the Curse of the Nat 1."
+            },
+            {
+                "role": "assistant",
+                "content": "Category 1: Flutter App Development 📱 - 1,2,3,4\nCategory 2: Python Programming and Application 💻 - 5,6,7,8,14\nCategory 3: Monty Python Entertainment Series 🎥- 9,12,13"
+            },
+            {
+                "role": "user",
+                "content": text
+            }
+        ],
+        temperature=1,
+        max_tokens=300,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+    return response
 
 
 def get_keyword(text):
