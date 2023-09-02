@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 import json
 import xml.etree.ElementTree as ET
 import yake
+import openai
+import feedparser
 
 load_dotenv()
 
@@ -112,6 +114,7 @@ def get_text_for_gpt():
     for i, datum in enumerate(data):
         next_link = str(i+1)+":"+datum["title"]+"\n"
         total_txt += next_link
+    return total_txt
 
 
 def callGPT(text):
@@ -144,12 +147,51 @@ def callGPT(text):
             }
         ],
         temperature=1,
-        max_tokens=300,
+        max_tokens=500,
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0
     )
-    return response.choices[0].message.content
+    gpt_answer=response.choices[0].message.content
+    return gpt_answer if gpt_answer!=None else "error"
+
+@bot.command()
+async def get_topics_from_gpt(ctx):
+    text=get_text_for_gpt()
+    gptText=callGPT(text)
+    if gptText=="error":
+        ctx.send("gpt call error")
+        return
+    tmp_list=gptText.split("\n")
+
+    for i , item in enumerate(tmp_list):
+        txt=""
+        position = item.rindex("-")
+        category_text=item[:position]
+        titles_text=item[position+1:]
+
+        txt+="# "+category_text+"\n"
+
+        tmp_list=titles_text.split(",")
+        title_numbers=[int(x) for x in tmp_list]
+
+        data = load_links_from_json("found_data.json")
+        # print("len data :" , len(data))
+
+        for num in title_numbers:
+            # print(num)
+            next_link = data[num-1]["title"]+" [link](<"+data[num-1]["link"]+">)\n"
+            if (len(txt)+len(next_link) < 1000):
+                txt += next_link
+            elif (len(txt)+len(next_link) >= 1000):
+                await ctx.send(txt, embed=None)
+                txt = ""
+                txt += next_link
+        if len(txt)>0:
+            await ctx.send(txt, embed=None)
+
+
+
 
 
 def get_keyword(text):
@@ -169,6 +211,44 @@ def get_keyword(text):
         lst.append(kw[0])
 
     return lst
+
+
+@bot.command()
+async def refresh_contents_feedparser(ctx):  # 테스트 안함
+    with open('found_data.json', 'w') as json_file:
+        json.dump([], json_file, indent=4)
+
+    existing_links = load_links_from_json("favorite_links.json")
+    found_data = load_links_from_json("found_data.json")
+    for i, fav_link in enumerate(existing_links["favorite_links"]):
+        await ctx.send(str(i) + "번째 링크 작업을 시작했습니다")
+        feed = feedparser.parse(fav_link)
+        for i in range(len(feed.entries)):
+            if hasattr(feed.entries[i], 'published'):
+                time=feed.entries[i].published 
+            elif hasattr(feed.entries[i], 'updated'):
+                time=feed.entries[i].updated 
+            else:
+                time = 'Not Available'
+            title = feed.entries[i].title if hasattr(feed.entries[i], 'title') else 'Not Available'
+            if hasattr(feed.entries[i], 'description'):
+                content = feed.entries[i].description
+            elif hasattr(feed.entries[i], 'summary'):
+                content = feed.entries[i].summary
+            else:
+                content = 'Not Available'
+            link = feed.entries[i].link if hasattr(feed.entries[i], 'link') else 'Not Available'
+            keywords = get_keyword(content)  # Assuming get_keyword is a function you've defined
+
+            found_data.append({
+                "title": title,
+                "content": content,
+                "link": link,
+                "time": time,
+                "keywords": keywords
+            })
+            with open('found_data.json', 'w') as json_file:
+                json.dump(found_data, json_file, indent=4)
 
 
 @bot.command()
@@ -197,11 +277,13 @@ async def refresh_contents(ctx):
                     for entry in root.findall('ns:entry', namespace):
                         title = entry.find('ns:title', namespace).text
                         content = entry.find('ns:content', namespace).text
+                        published = entry.find('ns:published', namespace).text
                         link = entry.find('ns:link', namespace).attrib['href']
                         found_data.append({
                             "title": title,
                             "content": content,
                             "link": link,
+                            "time": published,
                             "keywords": get_keyword(content)
                         })
                         with open('found_data.json', 'w') as json_file:
