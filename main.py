@@ -152,46 +152,154 @@ def callGPT(text):
         frequency_penalty=0,
         presence_penalty=0
     )
-    gpt_answer=response.choices[0].message.content
-    return gpt_answer if gpt_answer!=None else "error"
+    gpt_answer = response.choices[0].message.content
+    return gpt_answer if gpt_answer != None else "error"
+
 
 @bot.command()
 async def get_topics_from_gpt(ctx):
-    text=get_text_for_gpt()
-    gptText=callGPT(text)
-    if gptText=="error":
+    text = get_text_for_gpt()
+    gptText = callGPT(text)
+    if gptText == "error":
         ctx.send("gpt call error")
         return
-    tmp_list=gptText.split("\n")
+    tmp_list = gptText.split("\n")
 
-    for i , item in enumerate(tmp_list):
-        txt=""
+    for i, item in enumerate(tmp_list):
+        txt = ""
         position = item.rindex("-")
-        category_text=item[:position]
-        titles_text=item[position+1:]
+        category_text = item[:position]
+        titles_text = item[position+1:]
 
-        txt+="# "+category_text+"\n"
+        txt += "# "+category_text+"\n"
 
-        tmp_list=titles_text.split(",")
-        title_numbers=[int(x) for x in tmp_list]
+        tmp_list = titles_text.split(",")
+        title_numbers = [int(x) for x in tmp_list]
 
         data = load_links_from_json("found_data.json")
         # print("len data :" , len(data))
 
         for num in title_numbers:
             # print(num)
-            next_link = data[num-1]["title"]+" [link](<"+data[num-1]["link"]+">)\n"
+            next_link = data[num-1]["title"] + \
+                " [link](<"+data[num-1]["link"]+">)\n"
             if (len(txt)+len(next_link) < 1000):
                 txt += next_link
             elif (len(txt)+len(next_link) >= 1000):
                 await ctx.send(txt, embed=None)
                 txt = ""
                 txt += next_link
-        if len(txt)>0:
+        if len(txt) > 0:
             await ctx.send(txt, embed=None)
 
 
+def call_gpt(text):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": "Please classify the posts according to the topics. The number before '::-' is ID. Use '::-' when parsing with IDs. If a post doesn't fit into an existing topic, create a new one. Exclude topics that are not related to development. When you make new topic, add emojis in front of it. To make the answer short, you should answer only with IDs. don't use double enter like\n\n "
+            },
+            {
+                "role": "user",
+                "content": "current topics:\n1::-NoSQL Databases\n2::-🎨 Front-end Frameworks\n3::-🖥️ Back-end Development\n4::-모바일 앱 개발\n\ncurrent posts:\n3::-An In-depth Guide to Bootstrap 5 Features and Components\n4::-Tailwind CSS: Rapid UI Development with Utility-first Design\n5::-Advanced Animations with GSAP: Breathing Life into Web Elements\n7::-Node.js Performance Tuning: Best Practices for Large-scale Applications\n8::-Understanding Django ORM: Efficient Database Management\n9::-From Monolith to Microservices: Transitioning with Spring Boot\n52::-Setting up Jenkins Pipelines for Automated Deployment\n53::-Travis CI vs. CircleCI: A Comparative Analysis\n54::-Automating Deployment with GitLab CI/CD"
+            },
+            {
+                "role": "assistant",
+                "content": "2::-3,4,5\n3::-7,8,9\n🚀 Continuous Integration/Continuous Deployment (CI/CD)::-52,53,54"
+            },
+            {
+                "role": "user",
+                "content": "current topics:\n1::-🗃️ NoSQL Databases\n2::-🎨 Front-end Frameworks\n3::-🖥️ Back-end Development\n\ncurrent posts:\n10::-MongoDB Optimization Techniques for Large-scale Data\n11::-Vue.js 3: A Comprehensive Introduction\n12::-How to make a strawberry cake\n13::-Node.js vs. Deno: A Performance Breakdown\n14::-CSS Grid: Creating Responsive Layouts\n15::-AWS Lambda: Building Serverless Applications\n16::-The Rise of Progressive Web Apps in 2023"
+            },
+            {
+                "role": "assistant",
+                "content": "1::-10\n2::-11,14,16\n3::-13\n☁️ Serverless Architectures::-15"
+            },
+            {
+                "role": "user",
+                "content": "current topics:\n1::-☁️ Cloud Computing\n2::-🤖 AI & Machine Learning\n\ncurrent posts:\n80::-Deep Reinforcement Learning in Video Games\n81::-Deploying a Scalable Web Application on AWS\n82::-Best Practices in Mobile App UI Design\n83::-Introduction to Cryptocurrencies and Blockchain\n84::-Creating Interactive Visualizations with D3.js\n85::-The Role of Edge Computing in IoT\n86::-Dogs playing in playground"
+            },
+            {
+                "role": "assistant",
+                "content": "1::-81,85\n2::-80\n📱 Mobile App Design::-82\n💰 Blockchain & Cryptocurrencies ::- 83\n📊 Data Visualization ::- 84\n🌐 Edge & IoT::- 85"
+            },
+            {
+                "role": "user",
+                "content": text
+            }
+        ],
+        temperature=1,
+        max_tokens=256,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+    gpt_answer = response.choices[0].message.content
+    return gpt_answer if gpt_answer != None else "error"
 
+
+@bot.command()
+async def call(ctx):
+    topics_and_posts = dict()
+    posts_dict = dict()
+    posts_link_dict = dict()
+
+    topics_dict = dict()
+    topics = ""
+    posts = ""
+    posts_list = []
+    count = 1
+    # for idx in topics_dict:
+    #     topics += str(count)+"::-"+topics_dict[idx]+"\n"
+
+    data = load_links_from_json("found_data.json")
+
+    for i, datum in enumerate(data):
+        posts_dict[i+1] = datum["title"]
+        posts_link_dict[i+1] = datum["link"]
+        next_link = str(i+1)+"::-"+datum["title"]+"\n"
+        posts += next_link
+        if (i+1) % 30 == 0:
+            posts_list.append(posts)
+            posts = ""
+    posts_list.append(posts)
+    print(posts_list)
+    for post_dump in posts_list:
+        topics = ""
+        print("topics_dict: ", topics_dict)
+        for idx in range(len(topics_dict)):
+            topics += str(idx+1)+"::-"+topics_dict[idx+1]+"\n"
+        text = "current topics:\n"+topics+"current posts:\n"+post_dump
+        print(text)
+        gpt_answer = call_gpt(text)
+
+        print(gpt_answer)
+        lst = gpt_answer.split("\n")
+        for ans in lst:
+            topic = ans.split("::-")[0].strip()
+            posts = list(map(int, ans.split("::-")[1].strip().split(",")))
+            if len(topic) <= 1:  # 이미 있던 주제일 경우
+                topics_and_posts[int(topic)] += posts
+            else:  # 새로운 주제일 경우
+                cur_id = len(topics_dict)+1
+                topics_dict[cur_id] = topic
+                # cur_id += 1
+                topics_and_posts[cur_id] = posts
+    txt = ""
+    for item in topics_and_posts:
+
+        txt += "### "+topics_dict[item]+"\n"
+        print(item, topics_dict[item])
+        for post in topics_and_posts[item]:
+            if len(txt) > 500:
+                await ctx.send(txt, embed=None)
+                txt = ""
+            txt += posts_dict[post]+" [link](<"+posts_link_dict[post]+">)\n"
+            print(post, posts_dict[post])
+    if len(txt) > 0:
+        await ctx.send(txt, embed=None)
 
 
 def get_keyword(text):
@@ -225,20 +333,23 @@ async def refresh_contents_feedparser(ctx):  # 테스트 안함
         feed = feedparser.parse(fav_link)
         for i in range(len(feed.entries)):
             if hasattr(feed.entries[i], 'published'):
-                time=feed.entries[i].published 
+                time = feed.entries[i].published
             elif hasattr(feed.entries[i], 'updated'):
-                time=feed.entries[i].updated 
+                time = feed.entries[i].updated
             else:
                 time = 'Not Available'
-            title = feed.entries[i].title if hasattr(feed.entries[i], 'title') else 'Not Available'
+            title = feed.entries[i].title if hasattr(
+                feed.entries[i], 'title') else 'Not Available'
             if hasattr(feed.entries[i], 'description'):
                 content = feed.entries[i].description
             elif hasattr(feed.entries[i], 'summary'):
                 content = feed.entries[i].summary
             else:
                 content = 'Not Available'
-            link = feed.entries[i].link if hasattr(feed.entries[i], 'link') else 'Not Available'
-            keywords = get_keyword(content)  # Assuming get_keyword is a function you've defined
+            link = feed.entries[i].link if hasattr(
+                feed.entries[i], 'link') else 'Not Available'
+            # Assuming get_keyword is a function you've defined
+            keywords = get_keyword(content)
 
             found_data.append({
                 "title": title,
