@@ -160,7 +160,7 @@ async def call(ctx):
     posts_dict = dict()
     posts_link_dict = dict()
 
-    topics_dict = {1: "🤖 AI & Machine Learning with Python"}
+    topics_dict = {1: "🤖 AI & Machine Learning"}
     topics = ""
     posts = ""
     posts_list = []
